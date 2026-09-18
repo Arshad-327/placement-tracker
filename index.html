@@ -305,7 +305,10 @@
   }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+if(!window.supabase){ document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>'); }
+</script>
 <style>
 #authGate{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
 .auth-card{width:min(420px,100%);background:var(--paper-raised);border:1px solid var(--line);padding:28px;}
@@ -343,6 +346,10 @@
 <script>
 const SUPABASE_URL = 'https://ghqwgspyyuvybzrdvnpr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uVzuDdT1yZbvA-oAfg7mGw_FVGJrTqE';
+if(!window.supabase || typeof window.supabase.createClient !== 'function'){
+  document.getElementById('authMsg').textContent='Authentication library failed to load. Please refresh or try another browser.';
+  throw new Error('Supabase JavaScript library did not load');
+}
 const { createClient } = window.supabase;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -662,10 +669,12 @@ function showAuthMessage(msg, error=false){
 async function signInWithGoogle(){
   showAuthMessage('Opening Google sign-in…');
   try{
-    const {error}=await supabase.auth.signInWithOAuth({
+    const redirectTo = 'https://arshad-327.github.io/placement-tracker/';
+    const {data,error}=await supabase.auth.signInWithOAuth({
       provider:'google',
-      options:{redirectTo:window.location.origin + window.location.pathname}
+      options:{redirectTo}
     });
+    if(data?.url){ window.location.assign(data.url); return; }
     if(error){
       console.error('Google sign-in error:', error);
       showAuthMessage(error.message || 'Could not start Google sign-in.', true);
