@@ -310,20 +310,18 @@
 #authGate{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
 .auth-card{width:min(420px,100%);background:var(--paper-raised);border:1px solid var(--line);padding:28px;}
 .auth-card h2{font-size:25px;margin-bottom:6px}.auth-card p{color:var(--ink-soft);font-size:13px;margin:0 0 18px}
-.auth-card input{width:100%;margin-bottom:10px}.auth-actions{display:flex;gap:8px}.auth-actions button{flex:1}.auth-msg{min-height:20px;margin-top:12px!important}.userbar{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-bottom:10px}.logout-btn{background:none;border:1px solid var(--line);padding:5px 9px;cursor:pointer;color:var(--ink-soft)}
+.auth-actions{display:flex;gap:8px}.auth-actions button{flex:1}.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:15px;padding:12px 16px;background:#fff;border:1px solid #c9c9c9;color:#202124;cursor:pointer}.google-btn:hover{background:#f7f7f7}.google-icon{width:20px;height:20px}.auth-msg{min-height:20px;margin-top:12px!important}.userbar{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-bottom:10px}.logout-btn{background:none;border:1px solid var(--line);padding:5px 9px;cursor:pointer;color:var(--ink-soft)}
 </style>
 </head>
 <body>
 <div id="authGate">
   <div class="auth-card">
     <h2>Placement Tracker</h2>
-    <p>Sign in to sync your tracker across your phone and computer.</p>
-    <input id="authEmail" type="email" placeholder="Email" autocomplete="email">
-    <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password">
-    <div class="auth-actions">
-      <button type="button" class="primary" id="signInBtn">Sign in</button>
-      <button type="button" class="primary" id="signUpBtn">Create account</button>
-    </div>
+    <p>Sign in with Google to sync your tracker across your phone and computer.</p>
+    <button type="button" class="google-btn" id="googleBtn">
+      <svg class="google-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.75 9.75 0 0 0 12 21.75z"/><path fill="#FBBC05" d="M6.54 13.83A5.86 5.86 0 0 1 6.24 12c0-.64.11-1.26.3-1.83V7.64H3.3A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.05 4.36l3.24-2.53z"/><path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.18 14.63 2.25 12 2.25A9.75 9.75 0 0 0 3.3 7.64l3.24 2.53c.77-2.31 2.92-4.03 5.46-4.03z"/></svg>
+      Continue with Google
+    </button>
     <p class="auth-msg" id="authMsg"></p>
   </div>
 </div>
@@ -661,40 +659,20 @@ function showAuthMessage(msg, error=false){
   el.style.color=error ? 'var(--declined)' : 'var(--accepted)';
 }
 
-async function signIn(){
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  if(!email || !password){ showAuthMessage('Enter email and password.', true); return; }
-  showAuthMessage('Signing in…');
-  const {error}=await supabase.auth.signInWithPassword({email,password});
-  if(error) showAuthMessage(error.message,true);
-}
-
-async function signUp(){
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  if(!email || !password){ showAuthMessage('Enter email and password.', true); return; }
-  if(password.length < 6){ showAuthMessage('Password must be at least 6 characters.', true); return; }
-  showAuthMessage('Creating account…');
+async function signInWithGoogle(){
+  showAuthMessage('Opening Google sign-in…');
   try{
-    const {data:result,error}=await supabase.auth.signUp({
-      email,
-      password,
-      options:{ emailRedirectTo: window.location.origin + window.location.pathname }
+    const {error}=await supabase.auth.signInWithOAuth({
+      provider:'google',
+      options:{redirectTo:window.location.origin + window.location.pathname}
     });
     if(error){
-      console.error('Supabase sign-up error:', error);
-      showAuthMessage(error.message || 'Could not create account.', true);
-      return;
-    }
-    if(result.session){
-      showAuthMessage('Account created. Loading tracker…');
-    }else{
-      showAuthMessage('Account created. Check your email to confirm, then sign in.');
+      console.error('Google sign-in error:', error);
+      showAuthMessage(error.message || 'Could not start Google sign-in.', true);
     }
   }catch(e){
-    console.error('Sign-up exception:', e);
-    showAuthMessage('Sign-up failed: ' + (e?.message || String(e)), true);
+    console.error('Google sign-in exception:', e);
+    showAuthMessage('Google sign-in failed: ' + (e?.message || String(e)), true);
   }
 }
 
@@ -748,10 +726,8 @@ async function boot(){
   });
 }
 
-document.getElementById('signInBtn').addEventListener('click',signIn);
-document.getElementById('signUpBtn').addEventListener('click',signUp);
+document.getElementById('googleBtn').addEventListener('click',signInWithGoogle);
 document.getElementById('logoutBtn').addEventListener('click',signOut);
-document.getElementById('authPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signIn();});
 
 function uid(prefix){
   return prefix + '-' + Date.now() + '-' + Math.floor(Math.random()*10000);
